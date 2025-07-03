@@ -4,7 +4,7 @@ project(systemc_project)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# PATH TO SY INSTANLL
+# PATH TO SYSTEMC INSTALL
 set(SYSTEMC_HOME "$ENV{HOME}/systemc-install")
 
 include_directories(${SYSTEMC_HOME}/include)
