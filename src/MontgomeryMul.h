@@ -1,35 +1,42 @@
 
 #pragma once
 #include <systemc.h>
+#include <vector>
 
-const int W = 32; //total word length
-const int WORD_WIDTH = 16;
-const int NUM_WORDS = W / WORD_WIDTH;
+constexpr int W = 1024;           // total bit width of input/output
+constexpr int w = 64;             // word width
+constexpr int s = W / w;          // number of words
 
-SC_MODULE(MontgomeryMul){
-	//Ports
-	sc_in<bool> clk, start;
-	sc_in<sc_biguint<W>> a, b, n; //with a,b < n ofc
-	sc_in<sc_biguint<WORD_WIDTH>> n_prime;
-	
-	sc_out<sc_biguint<W>> result;
-	sc_out<bool> ready;
+SC_MODULE(MontgomeryMul) {
+    // Ports 
+    sc_in<bool> clk, start;
+    sc_in<sc_biguint<W>> a, b, p;           // operands and modulus
+    sc_in<sc_biguint<w>> p_prime;           // p' = -p^(-1) mod 2^w
+    sc_out<sc_biguint<W>> result;
+    sc_out<bool> ready;
 
-	//Internal
-	enum State {IDLE, LOAD, LOOP_I, REDUCE, CHECK_LOOP, FINAL_REDUCTION, DONE};
-	sc_signal<State> state; //current state for fsm
-	sc_biguint<W> A, B, N; 
-	sc_biguint<2*W> T; //accumulator
-	sc_biguint<WORD_WIDTH> a_i, m;
-	int i; // index over words of A
-	const sc_biguint<WORD_WIDTH + 1> R = sc_biguint<WORD_WIDTH + 1>(1) << WORD_WIDTH;
+	// Internal
+    enum State {
+        IDLE, INIT, MUL_LOOP_I, MUL_LOOP_J,
+        MUL_FINAL_SUM, REDUCE_M, REDUCE_LOOP_J,
+        REDUCE_FINAL, DONE
+    };
+    sc_signal<State> state;
+    sc_biguint<w> A[s], B[s], P[s];
 
-	SC_CTOR(MontgomeryMul){
-		SC_METHOD(fsm_process);
-		sensitive << clk.pos();
-		dont_initialize(); //striktly starts with first rising edge
-	}
+    sc_biguint<w> T[s + 2]; //accumulator
+    int i = 0, j = 0; // Loop counters
+    sc_biguint<w> C;  // carry
+    sc_biguint<w> m;  // reduction multiplier, is mod 2basew, so witdh w should be fine
 
-	void fsm_process();
+    
+    SC_CTOR(MontgomeryMul) {
+        SC_METHOD(fsm_process);
+        sensitive << clk.pos();
+        dont_initialize();
+		state = IDLE;
+    }
+
+    void fsm_process();
 
 };
